@@ -70,10 +70,13 @@ public class WalkCheckService extends Service {
                             // frame からbitmapの作成
                             Bitmap bmp = Utils.makeBitmap(data, cameraWidth, cameraHeight, parameters);
                             // bitma からmatの作成
-                            Mat m = new Mat();
-                            bitmapToMat(bmp, m);
+                            Mat oldMat = new Mat();
+                            bitmapToMat(bmp, oldMat);
+                            // image processing
+                            Mat newMat = imageProcessing(oldMat);
                             // matからbitmapの作成
-                            matToBitmap(m, bmp);
+                            matToBitmap(newMat, bmp);
+                            // 反映
                             MainActivity.imageView.setImageBitmap(bmp);
                         }
                     });
@@ -86,6 +89,13 @@ public class WalkCheckService extends Service {
             }
         };
         thread.start();
+    }
+
+    // 画像処理
+    private Mat imageProcessing(Mat oldMat) {
+        Mat mat = new Mat();
+        
+        return mat;
     }
 
 
