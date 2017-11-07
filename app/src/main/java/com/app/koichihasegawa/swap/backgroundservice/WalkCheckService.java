@@ -7,7 +7,6 @@ import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.os.IBinder;
 import android.util.Log;
-import android.widget.Toast;
 
 import com.app.koichihasegawa.swap.lib.Utils;
 import com.app.koichihasegawa.swap.ui.MainActivity;
@@ -41,7 +40,7 @@ public class WalkCheckService extends Service {
     private static final String TAG = "OCVSample::Activity";
     private SurfaceTexture mSurfaceTexture = new SurfaceTexture(10);
 
-    final double SCALE = 2;
+    final double SCALE = 1;
     final double MINSCALE = 7;
     final double MAXSCALE = 0.5;
 
@@ -141,7 +140,7 @@ public class WalkCheckService extends Service {
         Rect[] facesArray = faces.toArray();
         if (facesArray.length > 0) {
             detectNum++;
-            Toast.makeText(getBaseContext(), "顔認識 :" + detectNum, Toast.LENGTH_SHORT).show();
+            MainActivity.textView.setText(Integer.toString(detectNum));
             Imgproc.rectangle(oldMat,
                     new Point(facesArray[0].tl().x * SCALE, facesArray[0].tl().y * SCALE),
                     new Point(facesArray[0].br().x * SCALE, facesArray[0].br().y * SCALE),

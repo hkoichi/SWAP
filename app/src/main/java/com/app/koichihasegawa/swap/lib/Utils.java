@@ -44,7 +44,8 @@ public class Utils {
         InputStream is = null;
         FileOutputStream os = null;
         try {
-            cascadeFile = new File(cascadeDir, "lbpcascade_frontalface.xml");
+            cascadeFile = new File(cascadeDir, "lbpcascade_frontalface_improved.xml");
+            // cascadeFile = new File(cascadeDir, "haarcascade_eye.xml");
             if (!cascadeFile.exists()) {
                 is = mContext.getResources().openRawResource(R.raw.lbpcascade_frontalface);
                 os = new FileOutputStream(cascadeFile);

@@ -8,6 +8,7 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.app.koichihasegawa.swap.R;
@@ -21,6 +22,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
     public static SurfaceView mSurfaceView;
     public static SurfaceHolder mSurfaceHolder;
     public static ImageView imageView;
+    public static TextView textView;
 
     private RecordMode recordMode = RecordMode.WAITING;
 
@@ -33,6 +35,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         setContentView(R.layout.activity_main);
 
         imageView = (ImageView) findViewById(R.id.imageView);
+        textView = (TextView) findViewById(R.id.textView);
 
         final Button btnStart = (Button) findViewById(R.id.StartService);
         btnStart.setOnClickListener(new View.OnClickListener() {
