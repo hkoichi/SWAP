@@ -3,18 +3,23 @@ package com.app.koichihasegawa.swap.backgroundservice;
 import android.app.Service;
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Rect;
 import android.graphics.SurfaceTexture;
-import android.graphics.YuvImage;
 import android.hardware.Camera;
-import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
-import android.view.WindowManager;
 
-import java.io.ByteArrayOutputStream;
+import com.app.koichihasegawa.swap.lib.Utils;
+import com.app.koichihasegawa.swap.ui.MainActivity;
+
+import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.LoaderCallbackInterface;
+import org.opencv.android.OpenCVLoader;
+import org.opencv.core.Mat;
+
 import java.io.IOException;
+
+import static org.opencv.android.Utils.bitmapToMat;
+import static org.opencv.android.Utils.matToBitmap;
 
 
 /**
@@ -22,88 +27,95 @@ import java.io.IOException;
  */
 
 public class WalkCheckService extends Service {
-    private Camera camera = null;
-    private int NOTIFICATION_ID = 1;
+    public static Camera camera = null;
     private static final String TAG = "OCVSample::Activity";
-    // Binder given to clients
-    private final IBinder mBinder = new LocalBinder();
-    private WindowManager windowManager;
     private SurfaceTexture mSurfaceTexture = new SurfaceTexture(10);
-    Intent intializerIntent;
 
+    private Camera.Parameters parameters;
+    private int cameraWidth = 0;
+    private int cameraHeight = 0;
 
-    public class LocalBinder extends Binder {
-        WalkCheckService getService() {
-            // Return this instance of this service so clients can call public methods
-            return WalkCheckService.this;
+    // スレッドを制御する変数
+    private boolean runnning = true;
+
+    // opencv が読み込まれた後に呼ばれるコールバック
+    BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(WalkCheckService.this) {
+        @Override
+        public void onManagerConnected(int status) {
+            switch (status) {
+                case LoaderCallbackInterface.SUCCESS: {
+                    Log.i("", "OpenCV loaded successfully");
+                    startImageProcessingThread();
+                }
+                break;
+                default: {
+                    super.onManagerConnected(status);
+                }
+                break;
+            }
         }
-    }//end inner class that returns an instance of the service.
+    };
 
-    @Override
-    public IBinder onBind(Intent intent) {
-        intializerIntent = intent;
-        return mBinder;
-    }//end onBind.
-
-
-    @Override
-    public void onCreate() {
-
-        Log.i(TAG, "onCreate is called");
-        // Start foreground service to avoid unexpected kill
+    // 画像処理スレッドの呼び出し
+    public void startImageProcessingThread() {
         Thread thread = new Thread() {
             public void run() {
-
-                camera = Camera.open(1);
-                camera.setPreviewCallback(new Camera.PreviewCallback() {
-                    @Override
-                    public void onPreviewFrame(byte[] data, Camera camera) {
-                        Camera.Parameters parameters = camera.getParameters();
-                        int width = parameters.getPreviewSize().width;
-                        int height = parameters.getPreviewSize().height;
-
-                        YuvImage yuv = new YuvImage(data, parameters.getPreviewFormat(), width, height, null);
-
-                        ByteArrayOutputStream out = new ByteArrayOutputStream();
-                        yuv.compressToJpeg(new Rect(0, 0, width, height), 50, out);
-
-                        byte[] bytes = out.toByteArray();
-                        final Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
-
-                        // MainActivity.imageView.setImageBitmap(bitmap);
+                    camera = Camera.open(1);
+                    camera.setPreviewCallback(new Camera.PreviewCallback() {
+                        @Override
+                        public void onPreviewFrame(byte[] data, Camera camera) {
+                            if (!runnning) {
+                                return;
+                            }
+                            // frame からbitmapの作成
+                            Bitmap bmp = Utils.makeBitmap(data, cameraWidth, cameraHeight, parameters);
+                            // bitma からmatの作成
+                            Mat m = new Mat();
+                            bitmapToMat(bmp, m);
+                            // matからbitmapの作成
+                            matToBitmap(m, bmp);
+                            MainActivity.imageView.setImageBitmap(bmp);
+                        }
+                    });
+                    try {
+                        camera.setPreviewTexture(mSurfaceTexture);
+                    } catch (IOException e) {
+                        Log.e(TAG, "Error in setting the camera surface texture");
                     }
-                });
-
-                //now try to set the preview texture of the camera which is actually the  surfaceTexture that has just been created.
-                try {
-                    camera.setPreviewTexture(mSurfaceTexture);
-                } catch (IOException e) {
-                    Log.e(TAG, "Error in setting the camera surface texture");
-                }
-
-                camera.startPreview();
+                    camera.startPreview();
             }
-
-
         };
         thread.start();
-
     }
+
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        // opencv のロード
+        if (!OpenCVLoader.initDebug()) {
+            Log.d(TAG, "Internal OpenCV library not found. Using OpenCV Manager for initialization");
+            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, this, mLoaderCallback);
+        } else {
+            Log.d(TAG, "OpenCV library found inside package. Using it!");
+            mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+        }
+        return super.onStartCommand(intent, flags, startId);
+    }
+
 
 
     @Override
     public void onDestroy() {
-
-        Log.i(TAG, "surfaceDestroyed method");
-
-        camera.stopPreview();
-        camera.lock();
-
-        camera.release();
+        runnning = false;
         mSurfaceTexture.detachFromGLContext();
         mSurfaceTexture.release();
-        //stopService(intializerIntent);
-        //windowManager.removeView(surfaceView);
+        camera.stopPreview();
+        camera.lock();
+        camera = null;
     }
 
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null;
+    }
 }

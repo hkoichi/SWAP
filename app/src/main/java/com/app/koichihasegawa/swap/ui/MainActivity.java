@@ -8,9 +8,12 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.Toast;
 
 import com.app.koichihasegawa.swap.R;
 import com.app.koichihasegawa.swap.backgroundservice.WalkCheckService;
+
+import static com.app.koichihasegawa.swap.backgroundservice.WalkCheckService.camera;
 
 
 public class MainActivity extends AppCompatActivity implements SurfaceHolder.Callback {
@@ -18,6 +21,8 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
     public static SurfaceView mSurfaceView;
     public static SurfaceHolder mSurfaceHolder;
     public static ImageView imageView;
+
+    private RecordMode recordMode = RecordMode.WAITING;
 
     /**
      * Called when the activity is first created.
@@ -29,21 +34,34 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
 
         imageView = (ImageView) findViewById(R.id.imageView);
 
-        Button btnStart = (Button) findViewById(R.id.StartService);
+        final Button btnStart = (Button) findViewById(R.id.StartService);
         btnStart.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                Intent intent = new Intent(MainActivity.this, WalkCheckService.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startService(intent);
-            }
-        });
+                switch (recordMode) {
+                    case RECORDIND:
+                        stopService(new Intent(MainActivity.this, WalkCheckService.class));
+                        btnStart.setText("start");
+                        recordMode = RecordMode.WAITING;
+                        Toast.makeText(getApplicationContext(), "stop checking", Toast.LENGTH_SHORT).show();
+                        break;
+                    case WAITING:
+                        Intent intent = new Intent(MainActivity.this, WalkCheckService.class);
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        startService(intent);
+                        btnStart.setText("stop");
+                        recordMode = RecordMode.RECORDIND;
+                        Toast.makeText(getApplicationContext(), "start checking", Toast.LENGTH_SHORT).show();
 
-        Button btnStop = (Button) findViewById(R.id.StopService);
-        btnStop.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                stopService(new Intent(MainActivity.this, WalkCheckService.class));
+                        break;
+                }
             }
         });
+    }
+
+    @Override
+    protected void onDestroy() {
+        camera.release();
+        super.onDestroy();
     }
 
     @Override
@@ -58,5 +76,10 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
     public void surfaceDestroyed(SurfaceHolder holder) {
         // TODO Auto-generated method stub
 
+    }
+
+    private enum RecordMode {
+        RECORDIND,
+        WAITING
     }
 }

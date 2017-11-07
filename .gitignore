@@ -13,4 +13,7 @@
 /gradlew.bat
 /import-summary.txt
 /SWAP.iml
-
+/app/src/main/jniLibs
+/app/src/androidTest/
+/app/src/test
+/.idea/
