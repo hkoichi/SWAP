@@ -7,6 +7,7 @@ import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.os.IBinder;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.app.koichihasegawa.swap.lib.Utils;
 import com.app.koichihasegawa.swap.ui.MainActivity;
@@ -14,8 +15,17 @@ import com.app.koichihasegawa.swap.ui.MainActivity;
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
+import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfRect;
+import org.opencv.core.Point;
+import org.opencv.core.Rect;
+import org.opencv.core.Scalar;
+import org.opencv.core.Size;
+import org.opencv.imgproc.Imgproc;
+import org.opencv.objdetect.CascadeClassifier;
 
+import java.io.File;
 import java.io.IOException;
 
 import static org.opencv.android.Utils.bitmapToMat;
@@ -31,12 +41,22 @@ public class WalkCheckService extends Service {
     private static final String TAG = "OCVSample::Activity";
     private SurfaceTexture mSurfaceTexture = new SurfaceTexture(10);
 
+    final double SCALE = 2;
+    final double MINSCALE = 7;
+    final double MAXSCALE = 0.5;
+
     private Camera.Parameters parameters;
     private int cameraWidth = 0;
     private int cameraHeight = 0;
+    private Size mMinFaceSize = new Size(0, 0);
+    private Size mMaxFaceSize = new Size(0, 0);
+
+    private int detectNum = 0;
 
     // スレッドを制御する変数
     private boolean runnning = true;
+    // cascade classifierを用いた顔認証をするインスタンス
+    private CascadeClassifier mFaceDetector;
 
     // opencv が読み込まれた後に呼ばれるコールバック
     BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(WalkCheckService.this) {
@@ -45,6 +65,7 @@ public class WalkCheckService extends Service {
             switch (status) {
                 case LoaderCallbackInterface.SUCCESS: {
                     Log.i("", "OpenCV loaded successfully");
+                    mFaceDetector = setupFaceDetector();
                     startImageProcessingThread();
                 }
                 break;
@@ -60,32 +81,37 @@ public class WalkCheckService extends Service {
     public void startImageProcessingThread() {
         Thread thread = new Thread() {
             public void run() {
-                    camera = Camera.open(1);
-                    camera.setPreviewCallback(new Camera.PreviewCallback() {
-                        @Override
-                        public void onPreviewFrame(byte[] data, Camera camera) {
-                            if (!runnning) {
-                                return;
-                            }
-                            // frame からbitmapの作成
-                            Bitmap bmp = Utils.makeBitmap(data, cameraWidth, cameraHeight, parameters);
-                            // bitma からmatの作成
-                            Mat oldMat = new Mat();
-                            bitmapToMat(bmp, oldMat);
-                            // image processing
-                            Mat newMat = imageProcessing(oldMat);
-                            // matからbitmapの作成
-                            matToBitmap(newMat, bmp);
-                            // 反映
-                            MainActivity.imageView.setImageBitmap(bmp);
+                camera = Camera.open(1);
+                camera.setPreviewCallback(new Camera.PreviewCallback() {
+                    @Override
+                    public void onPreviewFrame(byte[] data, Camera camera) {
+                        if (!runnning) {
+                            return;
                         }
-                    });
-                    try {
-                        camera.setPreviewTexture(mSurfaceTexture);
-                    } catch (IOException e) {
-                        Log.e(TAG, "Error in setting the camera surface texture");
+                        if (cameraWidth == 0) {
+                            parameters = camera.getParameters();
+                            cameraWidth = parameters.getPreviewSize().width;
+                            cameraHeight = parameters.getPreviewSize().height;
+                        }
+                        // frame からbitmapの作成
+                        Bitmap bmp = Utils.makeBitmap(data, cameraWidth, cameraHeight, parameters);
+                        // bitma からmatの作成
+                        Mat oldMat = new Mat();
+                        bitmapToMat(bmp, oldMat);
+                        // image processing
+                        Mat newMat = imageProcessing(oldMat);
+                        // matからbitmapの作成
+                        matToBitmap(newMat, bmp);
+                        // 反映
+                        MainActivity.imageView.setImageBitmap(bmp);
                     }
-                    camera.startPreview();
+                });
+                try {
+                    camera.setPreviewTexture(mSurfaceTexture);
+                } catch (IOException e) {
+                    Log.e(TAG, "Error in setting the camera surface texture");
+                }
+                camera.startPreview();
             }
         };
         thread.start();
@@ -93,9 +119,49 @@ public class WalkCheckService extends Service {
 
     // 画像処理
     private Mat imageProcessing(Mat oldMat) {
-        Mat mat = new Mat();
-        
-        return mat;
+        if (mMinFaceSize.width == 0) {
+            mMinFaceSize = new Size(cameraHeight / MINSCALE, cameraWidth / MINSCALE);
+            mMaxFaceSize = new Size(cameraHeight / MAXSCALE, cameraWidth / MAXSCALE);
+        }
+        Mat smallImg = new Mat(new Size(cameraHeight / SCALE, cameraWidth / SCALE), CvType.CV_8UC1);
+
+        Mat gray = new Mat();
+        Imgproc.cvtColor(oldMat, gray, Imgproc.COLOR_BGR2GRAY);
+
+        Imgproc.resize(gray, smallImg, smallImg.size(), 0, 0, Imgproc.INTER_LINEAR);
+        Imgproc.equalizeHist(smallImg, smallImg);
+
+        MatOfRect faces = new MatOfRect();
+        mFaceDetector.detectMultiScale(smallImg, faces,
+                1.1,
+                2,
+                2,
+                mMinFaceSize,
+                mMaxFaceSize);
+        Rect[] facesArray = faces.toArray();
+        if (facesArray.length > 0) {
+            detectNum++;
+            Toast.makeText(getBaseContext(), "顔認識 :" + detectNum, Toast.LENGTH_SHORT).show();
+            Imgproc.rectangle(oldMat,
+                    new Point(facesArray[0].tl().x * SCALE, facesArray[0].tl().y * SCALE),
+                    new Point(facesArray[0].br().x * SCALE, facesArray[0].br().y * SCALE),
+                    new Scalar(1, 1, 0, 1), 3);
+        }
+        return oldMat;
+    }
+
+    // cascade classifierをset up
+    private CascadeClassifier setupFaceDetector() {
+        File cascadeFile = Utils.setUpCascadeFile(getApplicationContext());
+        if (cascadeFile == null) {
+            return null;
+        }
+
+        CascadeClassifier detector = new CascadeClassifier(cascadeFile.getAbsolutePath());
+        if (detector.empty()) {
+            return null;
+        }
+        return detector;
     }
 
 
@@ -111,7 +177,6 @@ public class WalkCheckService extends Service {
         }
         return super.onStartCommand(intent, flags, startId);
     }
-
 
 
     @Override
