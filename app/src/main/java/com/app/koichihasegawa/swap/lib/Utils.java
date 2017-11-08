@@ -10,6 +10,8 @@ import android.hardware.Camera;
 
 import com.app.koichihasegawa.swap.R;
 
+import org.opencv.objdetect.CascadeClassifier;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -21,6 +23,8 @@ import java.io.InputStream;
  */
 
 public class Utils {
+
+
     // byte[] からbitmapを作成する関数
     public static Bitmap makeBitmap(byte[] data, int cameraWidth, int cameraHeight, Camera.Parameters parameters) {
         YuvImage yuv = new YuvImage(data, parameters.getPreviewFormat(), cameraWidth, cameraHeight, null);
@@ -74,5 +78,19 @@ public class Utils {
             }
         }
         return cascadeFile;
+    }
+
+    // cascade classifierをset up
+    public static CascadeClassifier setupFaceDetector(Context context) {
+        File cascadeFile = Utils.setUpCascadeFile(context);
+        if (cascadeFile == null) {
+            return null;
+        }
+
+        CascadeClassifier detector = new CascadeClassifier(cascadeFile.getAbsolutePath());
+        if (detector.empty()) {
+            return null;
+        }
+        return detector;
     }
 }
