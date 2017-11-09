@@ -10,8 +10,10 @@
     </data>
 
     <RelativeLayout
+        android:id="@+id/lauout"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:background="@color/colorAccent">
 
         <ImageView
             android:id="@+id/imageView"
@@ -19,8 +21,9 @@
             android:layout_height="match_parent"
             android:layout_alignParentStart="true"
             android:layout_alignParentTop="true"
-            android:scaleType="centerCrop"
-            app:srcCompat="@mipmap/ic_launcher_round" />
+            android:background="@color/colorAccent"
+            android:scaleType="centerInside"
+            app:srcCompat="@drawable/orange" />
 
         <!--<Button-->
         <!--android:id="@+id/StartService"-->
@@ -34,30 +37,6 @@
         <!--android:background="@android:drawable/ic_media_play"-->
         <!--android:text="start" />-->
 
-        <TextView
-            android:id="@+id/textView"
-            android:layout_width="100dp"
-            android:layout_height="60dp"
-            android:layout_alignParentBottom="true"
-            android:layout_alignParentLeft="true"
-            android:layout_margin="20dp"
-            android:gravity="center"
-            android:text="0"
-            android:textAlignment="center"
-            android:textAllCaps="true"
-            android:textSize="30sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/textViewStep"
-            android:layout_width="100dp"
-            android:layout_height="60dp"
-            android:layout_margin="20dp"
-            android:text="0"
-            android:textAlignment="center"
-            android:textSize="30sp"
-            android:textStyle="bold" />
-
         <android.support.design.widget.FloatingActionButton
             android:id="@+id/StartService"
             android:layout_width="wrap_content"
@@ -66,11 +45,11 @@
             android:layout_centerHorizontal="true"
             android:layout_margin="20dp"
             android:clickable="true"
+            android:onClick="@{activity::onClickStart}"
             android:src="@android:drawable/ic_media_play"
             android:visibility="visible"
             app:backgroundTint="@color/colorPrimary"
-            app:fabSize="normal"
-            android:onClick="@{activity::onClickStart}"/>
+            app:fabSize="normal" />
 
         <android.support.design.widget.FloatingActionButton
             android:id="@+id/StopService"
@@ -80,10 +59,34 @@
             android:layout_centerHorizontal="true"
             android:layout_margin="20dp"
             android:clickable="false"
+            android:onClick="@{activity::onClickStop}"
             android:src="@android:drawable/ic_media_pause"
             android:visibility="gone"
             app:backgroundTint="@color/colorPrimary"
-            app:fabSize="normal"
-            android:onClick="@{activity::onClickStop}"/>
+            app:fabSize="normal" />
+
+        <TextView
+            android:id="@+id/explainText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignBottom="@+id/StartService"
+            android:layout_centerHorizontal="true"
+            android:layout_marginBottom="65dp"
+            android:text="ボタンを押してスタート"
+            android:textColor="@color/colorPrimary"
+            android:textSize="18sp" />
+
+        <ProgressBar
+            android:id="@+id/progressBar"
+            style="?android:attr/progressBarStyle"
+            android:layout_width="200dp"
+            android:layout_height="200dp"
+            android:layout_centerHorizontal="true"
+            android:layout_centerVertical="true"
+            android:visibility="gone"
+            android:indeterminate="true"
+            android:indeterminateTintMode="src_in"
+            android:indeterminateTint="@color/colorPrimaryDark"
+            android:toDegrees="100"/>
     </RelativeLayout>
 </layout>
