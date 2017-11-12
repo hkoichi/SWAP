@@ -42,14 +42,17 @@ public class Utils {
         return bmp;
     }
     // cascade file を読み込む関数
-    public static File setUpCascadeFile(Context mContext) {
+    public static File setUpCascadeFile(Context mContext, Boolean isEye) {
         File cascadeDir = mContext.getDir("cascade", Context.MODE_PRIVATE);
         File cascadeFile = null;
         InputStream is = null;
         FileOutputStream os = null;
         try {
-            cascadeFile = new File(cascadeDir, "lbpcascade_frontalface_improved.xml");
-            // cascadeFile = new File(cascadeDir, "haarcascade_eye.xml");
+            if(isEye) {
+                cascadeFile = new File(cascadeDir, "haarcascade_eye.xml");
+            } else {
+                cascadeFile = new File(cascadeDir, "lbpcascade_frontalface.xml");
+            }
             if (!cascadeFile.exists()) {
                 is = mContext.getResources().openRawResource(R.raw.lbpcascade_frontalface);
                 os = new FileOutputStream(cascadeFile);
@@ -81,8 +84,8 @@ public class Utils {
     }
 
     // cascade classifierをset up
-    public static CascadeClassifier setupFaceDetector(Context context) {
-        File cascadeFile = Utils.setUpCascadeFile(context);
+    public static CascadeClassifier setupFaceDetector(Context context, Boolean isEye) {
+        File cascadeFile = Utils.setUpCascadeFile(context, isEye);
         if (cascadeFile == null) {
             return null;
         }

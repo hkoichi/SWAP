@@ -43,7 +43,7 @@ public class WalkCheckService extends Service {
     private SurfaceTexture mSurfaceTexture = new SurfaceTexture(10);
 
     final double SCALE = 1;
-    final double MINSCALE = 7;
+    final double MINSCALE = 7 / SCALE;
     final double MAXSCALE = 0.5;
 
     private Camera.Parameters parameters;
@@ -54,17 +54,18 @@ public class WalkCheckService extends Service {
 
     private boolean isPhoning = false;
     private boolean isSWAPed = false;
-    private final int alivePhoning = 3;
+    private final int alivePhoning = 1;
     private int detectNum = 0;
 
     private SensorManager mSensorManager;
     private Sensor mStepDetectorSensor;
 
     // スレッドを制御する変数
-    private boolean isRunnning = true;
     private Thread processingThread;
     // cascade classifierを用いた顔認証をするインスタンス
     private CascadeClassifier mFaceDetector;
+    // cascade classifierを用いた目認証をするインスタンス
+    private CascadeClassifier mEyeDetector;
 
     public static Bitmap bmp;
 
@@ -75,7 +76,8 @@ public class WalkCheckService extends Service {
             switch (status) {
                 case LoaderCallbackInterface.SUCCESS: {
                     Log.i("", "OpenCV loaded successfully");
-                    mFaceDetector = Utils.setupFaceDetector(getApplicationContext());
+                    mFaceDetector = Utils.setupFaceDetector(getApplicationContext(), false);
+                    mEyeDetector = Utils.setupFaceDetector(getApplicationContext(), true);
                     startImageProcessingThread();
                 }
                 break;
@@ -147,16 +149,30 @@ public class WalkCheckService extends Service {
                 mMaxFaceSize);
         Rect[] facesArray = faces.toArray();
         if (facesArray.length > 0) {
-            detectNum = alivePhoning;
-            isPhoning = true;
-            Log.d("phone", "watching");
+//            MatOfRect eyes = new MatOfRect();
+//            Mat roi = new Mat(smallImg, facesArray[0]);
+//            Size mMaxEyeSize = new Size(cameraHeight / MAXSCALE / 3, cameraWidth / MAXSCALE / 3);
+//            mEyeDetector.detectMultiScale(roi, eyes,
+//                    1.1,
+//                    2,
+//                    2,
+//                    new Size(0, 0),
+//                    mMaxEyeSize
+//            );
+//            Rect[] eyesArray = eyes.toArray();
+//            if (eyesArray.length > 0) {
+//                Log.d("faceC", Integer.toString(eyesArray.length));
+                detectNum = alivePhoning;
+                isPhoning = true;
+                Log.d("faceC", "watching");
+//            }
         } else {
             detectNum--;
             if (detectNum < 0) {
                 isPhoning = false;
-                Log.d("phone", "not watching");
+                Log.d("faceC", "not watching");
             } else {
-                Log.d("phone", "watching");
+                Log.d("faceC", "watching");
             }
         }
         return oldMat;
@@ -167,6 +183,7 @@ public class WalkCheckService extends Service {
     public void onCreate() {
         mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         mStepDetectorSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR);
+        // FIXME: なおす
         mSensorManager.registerListener(mStepDetectListener, mStepDetectorSensor, SENSOR_DELAY_FASTEST);
         super.onCreate();
     }
@@ -180,7 +197,7 @@ public class WalkCheckService extends Service {
                 MainActivity.imageView.setImageBitmap(bmp);
                 Intent intent = new Intent(getApplicationContext(), MainActivity.class);
                 intent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-//                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 intent.putExtra("isStop", true);
                 getApplication().startActivity(intent);
                 isSWAPed = true;
@@ -210,7 +227,6 @@ public class WalkCheckService extends Service {
 
     @Override
     public void onDestroy() {
-        isRunnning = false;
         mSurfaceTexture.detachFromGLContext();
         mSurfaceTexture.release();
         camera.stopPreview();
